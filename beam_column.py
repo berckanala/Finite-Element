@@ -4,6 +4,7 @@ from elementclass import Element
 from nodeclass import Node
 from structuresolver import StructureSolver
 #-----------------------------------------------------------------------------------------------------------
+
 def plotElement(self, ax=None, color='b', text=False):
     """
     Dibuja el elemento como una línea entre sus nodos.
@@ -16,14 +17,34 @@ def plotElement(self, ax=None, color='b', text=False):
 
     ax.plot([xi, xj], [yi, yj], color + '-', linewidth=2)
 
-    if text:
-        # Ubica el texto en el centro del elemento
-        xc, yc = (xi + xj) / 2, (yi + yj) / 2
-        ax.text(xc, yc, f'E{self.node_i.name}-{self.node_j.name}', fontsize=10, color=color)
+    return ax
+def plot_deformed_elements(elementos, ax=None, scale_factor=1):
+    """
+    Grafica los elementos deformados aplicando un factor de escala.
+    :param elementos: lista de elementos a graficar.
+    :param ax: objeto de eje para la graficación.
+    :param scale_factor: factor de escala para amplificar la deformación.
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    for elem in elementos:
+        # Obtener las coordenadas deformadas de los nodos
+        xi, yi = elem.node_i.coordenadas_deformadas
+        xj, yj = elem.node_j.coordenadas_deformadas
+
+        # Aplicar escala de deformación
+        xi_deformed = xi * scale_factor
+        yi_deformed = yi * scale_factor
+        xj_deformed = xj * scale_factor
+        yj_deformed = yj * scale_factor
+
+        # Graficar el elemento deformado
+        ax.plot([xi_deformed, xj_deformed], [yi_deformed, yj_deformed], 'r-', linewidth=2)  # Elementos deformados en rojo
 
     return ax
-
 #---------------------------------------------DATOS INICIALES-----------------------------------------------
+
 globalParameters = {'nDoF': 3}  
 fc = 27  # MPa 
 E = 4700 * (fc ** 0.5)  # Módulo de elasticidad
@@ -37,6 +58,7 @@ Espaciado = 9.14
 a = 3.96 / 2
 b = 3.96
 Altura = [0, 3.66, 5.49, a, a, b, a, a, b, a, a, b, a, a, b]
+
 ql = 26
 
 # Función para calcular la carga
@@ -103,12 +125,12 @@ for i in range(len(Altura) - 1):
         if j == 0 or j == 5:
             A1 = 0.14 * A_ce[cont1]
             I1 = 0.14 * (A_ce[cont1]) ** 3 / 12
-            velemento = Element(nodos[k], nodos[k + 6], E, I1, A1, dx=0, dy=1)
+            velemento = Element(nodos[k], nodos[k + 6], E, I1, A1, dx=1, dy=0)
             elementos.append(velemento)
         else:
             A2 = 0.14 * A_cc[cont1]
             I2 = 0.14 * (A_cc[cont1]) ** 3 / 12
-            velemento = Element(nodos[k], nodos[k + 6], E, I2, A2, dx=0, dy=1)
+            velemento = Element(nodos[k], nodos[k + 6], E, I2, A2, dx=1, dy=0)
             elementos.append(velemento)
         
         # Crear vigas solo si NO hay cambio de sección
@@ -138,9 +160,6 @@ for j in range(5):
     elementos.append(elemento)
 
 
-
-
-
 nDoF_total = len(nodos) * globalParameters['nDoF']
 K_global = np.zeros((nDoF_total, nDoF_total))
 
@@ -150,11 +169,6 @@ for elemento in elementos:
     for i in range(6):
         for j in range(6):
             K_global[dofs[i], dofs[j]] += elemento.k_global[i, j]
-
-
-# Imprimir la matriz global
-#print("\n🔹 Matriz de Rigidez Global de la Estructura:")
-#print(K_global)
 
 solver = StructureSolver(nodos, K_global, globalParameters['nDoF'])
 
@@ -174,23 +188,23 @@ for i, nodo in enumerate(nodos):
 # Graficamos la estructura original y deformada
 fig, ax = plt.subplots(figsize=(8, 6))
 
+# Aplicar factor de escala a la deformación
+scale_factor = 1  # Ajusta este valor para visualizar mejor la deformación
+
 # Graficar los elementos originales
 for elem in elementos:
-    ax = elem.plotElement(ax=ax, color='b', text=True)
+    ax = elem.plotElement(ax=ax, color='b', text=False)
 
+plot_deformed_elements(elementos, ax=ax)
 # Graficar los nodos originales
 for nodo in nodos:
     ax.plot(nodo.coordenadas[0], nodo.coordenadas[1], 'bo')  # Nodos originales en azul
 
 # Graficar la estructura deformada
 for nodo in nodos:
+    # Aplicar el factor de escala para ver mejor la deformación
+    nodo.coordenadas_deformadas *= scale_factor
     ax.plot(nodo.coordenadas_deformadas[0], nodo.coordenadas_deformadas[1], 'ro')  # Nodos deformados en rojo
-
-# Dibujar las líneas de conexión entre los nodos deformados
-for elem in elementos:
-    xi, yi = elem.node_i.coordenadas_deformadas if hasattr(elem.node_i, 'coordenadas_deformadas') else elem.node_i.coordenadas
-    xj, yj = elem.node_j.coordenadas_deformadas if hasattr(elem.node_j, 'coordenadas_deformadas') else elem.node_j.coordenadas
-    ax.plot([xi, xj], [yi, yj], 'r--', linewidth=1)  # Líneas de conexión entre nodos deformados
 
 ax.set_xlabel('X [m]')
 ax.set_ylabel('Y [m]')
@@ -198,5 +212,3 @@ ax.set_title('Deformación de la Estructura')
 ax.grid(True)
 ax.axis('equal')
 plt.show()
-
-
