@@ -131,16 +131,20 @@ def calcular_carga(i, alt, ql):
     return q
 
 #Función crear cargas caso 3
-def cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q):
+def cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q, i):
+    if i==0 or i==1:
+            momento=0
+            cortante=0
+    else:
     # Ajuste de la carga
-    c1 = q_peso0 * L1 / 2 + q_peso1 * L2 / 2
-    c2 = 7 * (q_peso1 - q_peso0) / 20 + 3 * (q_peso2 - q_peso1) / 20
-    cortante = c1 + c2
-    
-    # Ajuste para el momento
-    m1 = -q_peso0 * L1**2 / 12 + q_peso1 * L2**2 / 12 + q * Espaciado**2 / 12
-    m2 = -(q_peso1 - q_peso0) * L1**2 / 30 + (q_peso2 - q_peso1) * L2 / 20
-    momento = m1 + m2
+            c1 = q_peso0 * L1 / 2 + q_peso1 * L2 / 2
+            c2 = 7 * (q_peso1 - q_peso0) / 20 + 3 * (q_peso2 - q_peso1) / 20
+            cortante = c1 + c2
+            
+            # Ajuste para el momento
+            m1 = -q_peso0 * L1**2 / 12 + q_peso1 * L2**2 / 12 + q * Espaciado**2 / 12
+            m2 = -(q_peso1 - q_peso0) * L1**2 / 30 + (q_peso2 - q_peso1) * L2 / 20
+            momento = m1 + m2
     
     # Asegúrate de que la carga y el momento estén en las unidades correctas (kN)
     return momento, cortante
@@ -154,7 +158,7 @@ def crear_nodos(caso):
             alt += h
             for j in range(6):
                 k = i * 6 + j
-                restriccion = ['r', 'r', 'r'] if i == 0 else ['f', 'f', 'f']
+                restriccion = ['r', 'r', 'f'] if i == 0 or i==1 and (j==0 or j==5) else ['f', 'f', 'f']
                 
                 q = calcular_carga(i, alt, ql)
                 
@@ -173,7 +177,7 @@ def crear_nodos(caso):
             alt += Altura[i]
             for j in range(6):
                 k = i * 6 + j
-                restriccion = ['r', 'r', 'r'] if i == 0 else ['f', 'f', 'f']
+                restriccion = ['r', 'r', 'f'] if i == 0 or i==1 and (j==0 or j==5) else ['f', 'f', 'f']
                 
                 q = calcular_carga(i, alt, ql)
                 q_peso = calcular_carga_peso()*0.5/sum(Altura)  # Carga adicional por peso
@@ -209,7 +213,7 @@ def crear_nodos(caso):
         # Cálculo de las cargas de peso por planta
         carga = []
         alt = 0
-        alt_q = 0.5*calcular_carga_peso() / sum(Altura)  # Ajuste de la carga
+        alt_q = 0.5*calcular_carga_peso() / (sum(Altura)-Altura[1])  # Ajuste de la carga
         for i in Altura:
             alt += i
             q_peso = alt_q * alt
@@ -222,17 +226,17 @@ def crear_nodos(caso):
             alt += Altura[i]
             for j in range(6):
                 k = i * 6 + j
-                restriccion = ['r', 'r', 'r'] if i == 0 else ['f', 'f', 'f']
+                restriccion = ['r', 'r', 'f'] if i == 0 or i==1 and (j==0 or j==5) else ['f', 'f', 'f']
                 
                 q = calcular_carga(i, alt, ql)
                 q_peso0 = carga[i - 1] if i > 0 else 0  # Carga del piso anterior
-                q_peso1 = carga[i]
+                q_peso1 = carga[i] 
                 q_peso2 = carga[i + 1] 
                 L1 = Altura[i] - Altura[i - 1] if i > 0 else Altura[i]  # Longitud entre pisos
                 L2 = Altura[i + 1] - Altura[i]  # Longitud entre pisos
                 
                 # Calcular momento y cortante con la función personalizada
-                momento, cortante = cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q)
+                momento, cortante = cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q, i)
                 
                 if j == 0:  # Aquí se aplica la carga triangular en las columnas
                     load = [cortante, -q * Espaciado / 2, momento]  # Carga para el nodo de la columna con carga triangular
@@ -255,7 +259,7 @@ def crear_nodos(caso):
             q_peso2 = 0  # No hay carga adicional en el último nodo
             L1 = alt - Altura[-1]  # Longitud desde el último piso
             L2 = 0  # No hay longitud adicional para el último nodo
-            momento, cortante = cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q)
+            momento, cortante = cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q, i)
             
             if j == 0:
                 load = [cortante, -q * Espaciado / 2, momento]  # Carga para el nodo de la columna con carga triangular
