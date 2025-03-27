@@ -19,53 +19,50 @@ def plotElement(self, ax=None, color='b', text=False):
 
     return ax
 def plot_deformed_elements(elementos, ax=None, scale_factor=1):
-    """
-    Grafica los elementos deformados aplicando un factor de escala.
-    :param elementos: lista de elementos a graficar.
-    :param ax: objeto de eje para la graficación.
-    :param scale_factor: factor de escala para amplificar la deformación.
-    """
     if ax is None:
         fig, ax = plt.subplots()
 
     for elem in elementos:
-        # Obtener las coordenadas deformadas de los nodos
         xi, yi = elem.node_i.coordenadas_deformadas
         xj, yj = elem.node_j.coordenadas_deformadas
 
-        # Aplicar escala de deformación
         xi_deformed = xi * scale_factor
         yi_deformed = yi * scale_factor
         xj_deformed = xj * scale_factor
         yj_deformed = yj * scale_factor
 
-        # Graficar el elemento deformado
-        ax.plot([xi_deformed, xj_deformed], [yi_deformed, yj_deformed], 'r-', linewidth=2)  # Elementos deformados en rojo
+        # Calcula la magnitud del desplazamiento para cada elemento
+        desplazamiento_elem = np.sqrt((xi_deformed - xi)**2 + (yi_deformed - yi)**2 + (xj_deformed - xj)**2 + (yj_deformed - yj)**2)
+        
+        # Escoge un color basado en el desplazamiento (más deformado -> más intenso)
+        color = plt.cm.jet(desplazamiento_elem / np.max(desplazamiento_elem))  # Utiliza un mapa de color
+        
+        ax.plot([xi_deformed, xj_deformed], [yi_deformed, yj_deformed], color=color, linewidth=2)  # Elementos deformados en color
 
     return ax
+
 #---------------------------------------------DATOS INICIALES-----------------------------------------------
 caso = 3
 globalParameters = {'nDoF': 3}  
-fc = 27  # MPa 
-E = 4700 * (fc ** 0.5)  # Módulo de elasticidad
-A_v = [1.6, 1.6, 1.16, 0.68]
-A_ch = [0.36, 0.33, 0.3, 0.24]
-A_cc = [5, 4.55, 3.70, 2.83, 2.57]
-A_ce = [3.70, 3.70, 2.83, 2.57, 2.33]
-Alt_cs = [11.13, 19.05, 26.97, 34.89]
+E = 200000000  # Módulo de elasticidad
+A_v = [1.6, 1.6, 1.16, 0.68] #metros
+A_ch = [0.36, 0.33, 0.3, 0.24] #metros
+A_cc = [5, 4.55, 3.70, 2.83, 2.57]#metros
+A_ce = [3.70, 3.70, 2.83, 2.57, 2.33]#metros
+Alt_cs = [11.13, 19.05, 26.97, 34.89]#metros
 
-Espaciado = 9.14
-a = 3.96 / 2
-b = 3.96
-Altura = [0, 3.66, 5.49, a, a, b, a, a, b, a, a, b, a, a, b]
+Espaciado = 9.14 #metros
+a = 3.96 / 2#metros
+b = 3.96#metros
+Altura = [0, 3.66, 5.49, a, a, b, a, a, b, a, a, b, a, a, b]#metros
 
-ql = 26
+ql = 26 #kN
 
 def calcular_carga_peso():
     q_peso = 0
     altidx = 0
     cont1 = 0
-    densidad = 24.525  # kN/m^3 (2.5 Ton/m³ * 9.81 para convertir a kN/m³)
+    densidad = 7800/1000*9.81  # kN/m^3 (2.5 Ton/m³ * 9.81 para convertir a kN/m³)
 
     for i in range(len(Altura) - 1):
         altidx += Altura[i]
@@ -212,7 +209,7 @@ def crear_nodos(caso):
         # Cálculo de las cargas de peso por planta
         carga = []
         alt = 0
-        alt_q = 0.01*calcular_carga_peso() / sum(Altura)  # Ajuste de la carga
+        alt_q = 0.5*calcular_carga_peso() / sum(Altura)  # Ajuste de la carga
         for i in Altura:
             alt += i
             q_peso = alt_q * alt
