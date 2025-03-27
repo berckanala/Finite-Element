@@ -33,8 +33,8 @@ class Element:
         self.k_trans = self._transform_to_global()
         self.k_global = self._rigidoffset()
 
-        if printSummary:
-            self.print_summary()
+        #if printSummary:
+        #    self.print_summary()
 
     def _get_rotation_matrix(self):
         # Calcular la matriz de rotación R para el ángulo de la viga
