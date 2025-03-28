@@ -5,56 +5,45 @@ from nodeclass import Node
 from structuresolver import StructureSolver
 #-----------------------------------------------------------------------------------------------------------
 
-# Función para graficar la estructura (nodos y barras)
-def plot_structure(elementos, nodos, ax=None):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 6))
-    
-    # Graficar las barras (elementos)
-    for elem in elementos:
-        xi, yi = elem.node_i.coordenadas
-        xj, yj = elem.node_j.coordenadas
-        ax.plot([xi, xj], [yi, yj], 'b-', linewidth=2)  # Barras de la estructura en azul
-    
-    # Graficar los nodos
-    for nodo in nodos:
-        ax.plot(nodo.coordenadas[0], nodo.coordenadas[1], 'bo')  # Nodos originales en azul
-    
-    ax.set_xlabel('Posición X [m]')
-    ax.set_ylabel('Posición Y [m]')
-    ax.set_title('Estructura con Nodos y Barras')
-    ax.grid(True)
-    ax.axis('equal')
+def plot_structure_with_shear_diagram(elements):
+    """
+    Esta función recibe una lista de elementos y genera una figura con la estructura y el diagrama de corte.
+    Se distinguen los elementos horizontales y verticales.
+    """
+    fig, ax = plt.subplots(figsize=(12, 8))  # Crear una figura de mayor tamaño
 
-# Función para graficar el diagrama de momento flector
-def plot_moment_diagram(elementos, momentos, ax=None):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 6))
-    
-    # Graficar la estructura
-    plot_structure(elementos, nodos, ax=ax)
-    
-    # Graficar los momentos a lo largo de cada barra
-    for i, elem in enumerate(elementos):
+    # Graficar la estructura (vigas y columnas)
+    for elem in elements:
         xi, yi = elem.node_i.coordenadas
         xj, yj = elem.node_j.coordenadas
-        
-        # Obtener el momento calculado para este elemento
-        momento = momentos[i]  # Suponiendo que los momentos son constantes en este caso
-        
-        # Graficar el momento flector para este elemento
-        # Aquí, la posición a lo largo de la barra se genera entre xi y xj
-        x_positions = np.linspace(xi, xj, 100)  # Generamos 100 puntos a lo largo de la barra
-        y_positions = np.full_like(x_positions, momento)  # El momento es constante a lo largo del elemento
-        
-        # Graficamos el diagrama de momentos
-        ax.plot(x_positions, y_positions, 'r-', label=f'Momento {i+1}')
-    
-    ax.set_xlabel('Posición [m]')
-    ax.set_ylabel('Momento [kNm]')
-    ax.set_title('Diagrama de Momentos Flectores')
+        ax.plot([xi, xj], [yi, yj], 'b-', linewidth=2)  # Elemento en azul
+
+    # Para cada elemento, calcular y graficar el diagrama de corte
+    for elem in elements:
+        xi, yi = elem.node_i.coordenadas
+        xf, yf = elem.node_j.coordenadas
+
+        # Llamar a la función de cálculo de fuerzas
+        V_scaled, M_scaled, A_scaled = elem.calculate_forces()
+
+        if xi == xf:  # Elemento vertical
+            # Ajustar el corte para los elementos verticales (trasponer los valores de coordenadas)
+            ax.plot(V_scaled, np.linspace(yi, yf, 100), label=f'Elemento {elem.node_i.name}-{elem.node_j.name} - Corte Vertical', linewidth=1)
+        else:  # Elemento horizontal
+            # Ajustar el corte para los elementos horizontales (añadir yf para mover el diagrama a la coordenada final)
+            ax.plot(np.linspace(xi, xf, 100), V_scaled + yf, label=f'Elemento {elem.node_i.name}-{elem.node_j.name} - Corte Horizontal', linewidth=1)
+
+    # Añadir etiquetas y formato
+    ax.set_title("Diagrama de Corte de la Estructura")
+    ax.set_xlabel("Posición a lo largo de la viga (m)")
+    ax.set_ylabel("Esfuerzo Cortante (kN)")
     ax.grid(True)
+
+    # Mostrar la leyenda
     ax.legend(loc='best')
+
+    # Mostrar la figura
+    plt.tight_layout()
     plt.show()
 
 
@@ -444,10 +433,7 @@ for caso in range(1, 4):
 
         # Graficamos los nodos deformados en rojo
         ax.plot(nodo_deformado_scaled[0], nodo_deformado_scaled[1], 'ro')  # Nodos deformados en rojo
-    momentos = [10, 20, 15, 30, 25,5]  # Momentos flectores simplificados para cada barra
-
-# Llamada a la función para graficar el diagrama de momento flector sobre la estructura
-    plot_moment_diagram(elementos, momentos)
+    plot_structure_with_shear_diagram(elementos)
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
     ax.set_title('Deformación de la Estructura')
