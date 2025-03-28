@@ -49,8 +49,8 @@ def plot_structure_with_shear_diagram(elements):
 # Crear nodos
 nodos = [
     Node(name=1, coordenadas=[0, 0], nodalLoad=[0, 0, 0], restrain=['r', 'r', 'f']),
-    Node(name=2, coordenadas=[0, 4], nodalLoad=[0, 10, 5], restrain=['f', 'f', 'f']),
-    Node(name=3, coordenadas=[5, 4], nodalLoad=[0, 10, -5], restrain=['f', 'f', 'f']),
+    Node(name=2, coordenadas=[0, 4], nodalLoad=[0, 10, 0], restrain=['f', 'f', 'f']),
+    Node(name=3, coordenadas=[5, 4], nodalLoad=[0, 10,0], restrain=['f', 'f', 'f']),
     Node(name=4, coordenadas=[5, 0], nodalLoad=[0, 0, 0], restrain=['r', 'r', 'f'])
 ]
 

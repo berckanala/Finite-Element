@@ -8,7 +8,7 @@ w = q   # Carga por unidad de longitud (kN/m)
 
 # Fuerzas cortantes en los nodos
 V1 = -10  # Reacción en el primer apoyo (kN)
-V2 = 0  # Reacción en el segundo apoyo (kN)
+V2 = 10  # Reacción en el segundo apoyo (kN)
 
 # Momentos en los nodos
 M1 = 0  # Momento en el primer apoyo (kN.m)
