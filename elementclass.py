@@ -12,7 +12,7 @@ class Element:
         # Nodos del elemento
         self.node_i = node_i
         self.node_j = node_j
-        
+        self.nodal_loads = np.hstack([node_i.nodalLoad, node_j.nodalLoad])
         # Propiedades del material y la sección transversal
         self.E = E
         self.I = I
@@ -35,6 +35,62 @@ class Element:
 
         #if printSummary:
         #    self.print_summary()
+    def calculate_forces(self):
+        """
+        Calcula las fuerzas de corte, axial y momento en los nodos del elemento
+        usando las cargas nodales de los nodos i y j.
+        """
+
+        # Carga nodal en cada nodo (nodalLoad de los nodos i y j)
+        load_i = self.node_i.nodalLoad
+        load_j = self.node_j.nodalLoad
+
+        # Determinar las coordenadas de los nodos
+        xi, yi = self.node_i.coordenadas
+        xf, yf = self.node_j.coordenadas
+
+        # Comprobamos si el elemento es horizontal o vertical
+        if xi == xf:
+            # Elemento vertical
+            V1 = load_i[0]  # Fuerza cortante en el nodo i
+            V2 = -load_j[0]  # Fuerza cortante en el nodo j
+            A1 = load_i[1]  # Fuerza axial en el nodo i (no suele aplicarse en elementos verticales, por lo general es 0)
+            A2 = load_j[1]  # Fuerza axial en el nodo j
+            M1 = load_i[2]  # Momento en el nodo i
+            M2 = load_j[2]  # Momento en el nodo j
+            
+        else:
+            # Elemento horizontal
+            A1 = load_i[0]  # Fuerza axial en el nodo i
+            A2 = load_j[0]  # Fuerza axial en el nodo j
+            V1 = load_i[1]  # Fuerza cortante en el nodo i
+            V2 = -load_j[1]  # Fuerza cortante en el nodo j
+            M1 = load_i[2]  # Momento en el nodo i
+            M2 = load_j[2]  # Momento en el nodo j
+
+        # Crear una malla de puntos a lo largo de la viga
+        x = np.linspace(0, self.length, 100)
+
+        # Interpolación de la fuerza cortante (V)
+        V = V1 + (V2 - V1) * x / self.length # Interpolación lineal de la fuerza cortante
+
+        # Calcular el momento integrando la fuerza cortante
+        M = -np.cumsum(V) * (x[1] - x[0])  # Aproximación de la integral del esfuerzo cortante
+        M -= M[0]  # Ajustar para que M(x=0) = 0
+
+        # Sumamos M1 y M2 al momento en los extremos
+        M += M1  # Añadir el momento en el primer nodo
+
+        # Escalar los diagramas para visualización
+        escala = 0.1  # Este factor ajusta la escala del diagrama
+        V_scaled = V * escala
+        M_scaled = M * escala
+        A = A1  # Asumiendo fuerza axial constante
+        A_scaled = np.full_like(x, A * 0.1)
+
+        return V_scaled, M_scaled, A_scaled
+
+
 
     def _get_rotation_matrix(self):
         # Calcular la matriz de rotación R para el ángulo de la viga
@@ -106,7 +162,16 @@ class Element:
         ])
 
         return T_rigid.T @ self.k_trans @ T_rigid
-
+    def extractForces(self, desplazamientos):
+        """
+        Calcula las fuerzas internas (cortantes y momentos) a partir de los desplazamientos de los nodos
+        """
+        dofs = np.hstack([self.node_i.idx, self.node_j.idx])
+        desplazamientos_local = desplazamientos[dofs]  # Desplazamientos en los nodos locales
+        
+        # Las fuerzas internas son K_local * desplazamientos_local
+        self.f_local = np.dot(self.k_local, desplazamientos_local)
+        return self.f_local
     def plotElement(self, ax=None, color='b', text=False):
         if ax is None:
             fig, ax = plt.subplots()

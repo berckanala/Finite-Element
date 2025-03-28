@@ -5,6 +5,60 @@ from nodeclass import Node
 from structuresolver import StructureSolver
 #-----------------------------------------------------------------------------------------------------------
 
+# Función para graficar la estructura (nodos y barras)
+def plot_structure(elementos, nodos, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Graficar las barras (elementos)
+    for elem in elementos:
+        xi, yi = elem.node_i.coordenadas
+        xj, yj = elem.node_j.coordenadas
+        ax.plot([xi, xj], [yi, yj], 'b-', linewidth=2)  # Barras de la estructura en azul
+    
+    # Graficar los nodos
+    for nodo in nodos:
+        ax.plot(nodo.coordenadas[0], nodo.coordenadas[1], 'bo')  # Nodos originales en azul
+    
+    ax.set_xlabel('Posición X [m]')
+    ax.set_ylabel('Posición Y [m]')
+    ax.set_title('Estructura con Nodos y Barras')
+    ax.grid(True)
+    ax.axis('equal')
+
+# Función para graficar el diagrama de momento flector
+def plot_moment_diagram(elementos, momentos, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 6))
+    
+    # Graficar la estructura
+    plot_structure(elementos, nodos, ax=ax)
+    
+    # Graficar los momentos a lo largo de cada barra
+    for i, elem in enumerate(elementos):
+        xi, yi = elem.node_i.coordenadas
+        xj, yj = elem.node_j.coordenadas
+        
+        # Obtener el momento calculado para este elemento
+        momento = momentos[i]  # Suponiendo que los momentos son constantes en este caso
+        
+        # Graficar el momento flector para este elemento
+        # Aquí, la posición a lo largo de la barra se genera entre xi y xj
+        x_positions = np.linspace(xi, xj, 100)  # Generamos 100 puntos a lo largo de la barra
+        y_positions = np.full_like(x_positions, momento)  # El momento es constante a lo largo del elemento
+        
+        # Graficamos el diagrama de momentos
+        ax.plot(x_positions, y_positions, 'r-', label=f'Momento {i+1}')
+    
+    ax.set_xlabel('Posición [m]')
+    ax.set_ylabel('Momento [kNm]')
+    ax.set_title('Diagrama de Momentos Flectores')
+    ax.grid(True)
+    ax.legend(loc='best')
+    plt.show()
+
+
+#---------------------------------------------CLASES---------------------------------------------------------
 def plotElement(self, ax=None, color='b', text=False):
     """
     Dibuja el elemento como una línea entre sus nodos.
@@ -18,26 +72,29 @@ def plotElement(self, ax=None, color='b', text=False):
     ax.plot([xi, xj], [yi, yj], color + '-', linewidth=2)
 
     return ax
+# Función para graficar los elementos deformados
 def plot_deformed_elements(elementos, ax=None, scale_factor=1):
     if ax is None:
         fig, ax = plt.subplots()
 
     for elem in elementos:
-        xi, yi = elem.node_i.coordenadas_deformadas
-        xj, yj = elem.node_j.coordenadas_deformadas
+        xi, yi = elem.node_i.coordenadas
+        xj, yj = elem.node_j.coordenadas
 
-        xi_deformed = xi * scale_factor
-        yi_deformed = yi * scale_factor
-        xj_deformed = xj * scale_factor
-        yj_deformed = yj * scale_factor
+        # Calculamos los desplazamientos deformados escalados
+        delta_xi = desplazamientos[elem.node_i.idx[0]]  # Desplazamiento nodo i en X
+        delta_yi = desplazamientos[elem.node_i.idx[1]]  # Desplazamiento nodo i en Y
+        delta_xj = desplazamientos[elem.node_j.idx[0]]  # Desplazamiento nodo j en X
+        delta_yj = desplazamientos[elem.node_j.idx[1]]  # Desplazamiento nodo j en Y
 
-        # Calcula la magnitud del desplazamiento para cada elemento
-        desplazamiento_elem = np.sqrt((xi_deformed - xi)**2 + (yi_deformed - yi)**2 + (xj_deformed - xj)**2 + (yj_deformed - yj)**2)
-        
-        # Escoge un color basado en el desplazamiento (más deformado -> más intenso)
-        color = plt.cm.jet(desplazamiento_elem / np.max(desplazamiento_elem))  # Utiliza un mapa de color
-        
-        ax.plot([xi_deformed, xj_deformed], [yi_deformed, yj_deformed], color=color, linewidth=2)  # Elementos deformados en color
+        # Aplicamos el factor de escala solo a las deformaciones
+        xi_deformed = xi + delta_xi * scale_factor
+        yi_deformed = yi + delta_yi * scale_factor
+        xj_deformed = xj + delta_xj * scale_factor
+        yj_deformed = yj + delta_yj * scale_factor
+
+        # Graficamos el elemento deformado como una línea entre los nodos deformados
+        ax.plot([xi_deformed, xj_deformed], [yi_deformed, yj_deformed], 'r-', linewidth=2)  # Barra deformada
 
     return ax
 
@@ -45,10 +102,14 @@ def plot_deformed_elements(elementos, ax=None, scale_factor=1):
 caso = 3
 globalParameters = {'nDoF': 3}  
 E = 200000000  # Módulo de elasticidad
-A_v = [1.6, 1.6, 1.16, 0.68] #metros
-A_ch = [0.36, 0.33, 0.3, 0.24] #metros
-A_cc = [5, 4.55, 3.70, 2.83, 2.57]#metros
-A_ce = [3.70, 3.70, 2.83, 2.57, 2.33]#metros
+
+A_ce=[0.070322, 0.070322, 0.053742, 0.048774, 0.044193]#metros cuadrados
+I_ce=[2.2643e-3, 2.2643e-3, 1.598e-3, 1.415e-3, 1.2529e-3]#metros cuadrados
+A_cc=[0.094839, 0.086451, 0.070322, 0.053742, 0.048774]#metros cuadrados
+I_cc=[3.417e-3, 2.993e-3, 2.2643e-3, 1.598e-3, 1.415e-3]#metros cuadrados
+
+A_v=[0.030323, 0.030323, 0.022064, 0.012968]#metros cuadrados
+I_v=[4.0624e-3, 4.0624e-3, 2.052e-3, 7.617e-4]#metros cuadrados
 Alt_cs = [11.13, 19.05, 26.97, 34.89]#metros
 
 Espaciado = 9.14 #metros
@@ -75,61 +136,59 @@ def calcular_carga_peso():
             
             # Calcular para columnas
             if j == 0 or j == 5:
-                A1 = 0.14 * A_ce[cont1]  # Área de la columna
+                A1 = A_ce[cont1]  # Área de la columna
                 Longitud = Altura[i+1] - Altura[i]  # Longitud del piso
                 q_peso += A1 * Longitud * densidad  # Peso de la columna
             else:
-                A2 = 0.14 * A_cc[cont1]  # Área para otras columnas
+                A2 = A_cc[cont1]  # Área para otras columnas
                 Longitud = Altura[i+1] - Altura[i]  # Longitud del piso
                 q_peso += A2 * Longitud * densidad  # Peso de otras columnas
             
             # Crear vigas solo si NO hay cambio de sección
             if j < 5 and i != 0 and not any(np.isclose(altidx, val) for val in Alt_cs):
                 if i % 2 == 0 and i > 3:
-                    A = A_v[3] * A_ch[3]  # Área de la viga
+                    A = A_v[3]  # Área de la viga
                     q_peso += A * Espaciado * densidad  # Peso de la viga
                 elif i == 1:
-                    A = A_v[0] * A_ch[0]
+                    A = A_v[0] 
                     q_peso += A * Espaciado * densidad
                 elif i == 2:
-                    A = A_v[1] * A_ch[1]
+                    A = A_v[1] 
                     q_peso += A * Espaciado * densidad
                 elif i % 2 == 1 and i > 3:
-                    A = A_v[2] * A_ch[2]
+                    A = A_v[2] 
                     q_peso += A * Espaciado * densidad
     
     # Agregar el peso para el último piso horizontal
     for j in range(5):
-        A = 0.24 * 0.68  # Área de la última viga
+        A = A_v[3]
         q_peso += A * Espaciado * densidad  # Peso de la última viga
     
     return q_peso
 
-
 # Función para calcular la carga Caso 1
 def calcular_carga(i, alt, ql):
     if i % 2 == 0 and i > 3:
-        A = A_v[3] * A_ch[3]
+        A = A_v[3] 
         qd = A * Espaciado * 2.5
         if alt == 40.83:
             ql = 23.1
         q = ql + qd
     elif i == 1:
-        A = A_v[0] * A_ch[0]
+        A = A_v[0] 
         qd = A * Espaciado * 2.5
         q = ql + qd
     elif i == 2:
-        A = A_v[1] * A_ch[1]
+        A = A_v[1] 
         qd = A * Espaciado * 2.5
         q = ql + qd
     elif i % 2 == 1 and i > 3:
-        A = A_v[2] * A_ch[2]
+        A = A_v[2] 
         qd = A * Espaciado * 2.5
         q = ql + qd
     else:
         q = 0
     return q
-
 #Función crear cargas caso 3
 def cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q, i):
     if i==0 or i==1:
@@ -148,7 +207,6 @@ def cargas_caso3(q_peso0, q_peso1, q_peso2, L1, L2, q, i):
     
     # Asegúrate de que la carga y el momento estén en las unidades correctas (kN)
     return momento, cortante
-
 
 def crear_nodos(caso):
     nodos = []
@@ -273,13 +331,8 @@ def crear_nodos(caso):
 
     return nodos
 
- 
 
-
-
-
-
-def crear_elementos(nodos):
+def crear_elementos(nodos, dx):
     elementos = []
     altidx = 0
     cont1 = 0
@@ -297,97 +350,107 @@ def crear_elementos(nodos):
             if k + 6 < len(nodos):  # Verifica que k + 6 esté dentro de los índices válidos
                 # Crear elementos de columna
                 if j == 0 or j == 5:
-                    A1 = 0.14 * A_ce[cont1]
-                    I1 = 0.14 * (A_ce[cont1]) ** 3 / 12
-                    velemento = Element(nodos[k], nodos[k + 6], E, I1, A1, dx=0, dy=0)
+                    A1 =  A_ce[cont1]
+                    I1 = I_ce[cont1]
+                    velemento = Element(nodos[k], nodos[k + 6], E, I1, A1, dx=dx, dy=0)
                     elementos.append(velemento)
                 else:
-                    A2 = 0.14 * A_cc[cont1]
-                    I2 = 0.14 * (A_cc[cont1]) ** 3 / 12
-                    velemento = Element(nodos[k], nodos[k + 6], E, I2, A2, dx=0, dy=0)
+                    A2 = A_cc[cont1]
+                    I2 = I_cc[cont1]
+                    velemento = Element(nodos[k], nodos[k + 6], E, I2, A2, dx=dx, dy=0)
                     elementos.append(velemento)
             
                 # Crear vigas solo si NO hay cambio de sección
                 if j < 5 and i != 0 and not any(np.isclose(altidx, val) for val in Alt_cs):
                     if i % 2 == 0 and i > 3:
-                        A = A_v[3] * A_ch[3]
-                        I = A_ch[3] * (A_v[3]) ** 3 / 12
+                        A = A_v[3] 
+                        I = I_v[3]
                     elif i == 1:
-                        A = A_v[0] * A_ch[0]
-                        I = A_ch[0] * (A_v[0]) ** 3 / 12
+                        A = A_v[0] 
+                        I = I_v[0]
                     elif i == 2:
-                        A = A_v[1] * A_ch[1]
-                        I = A_ch[1] * (A_v[1]) ** 3 / 12
+                        A = A_v[1] 
+                        I = I_v[1]
                     elif i % 2 == 1 and i > 3:
-                        A = A_v[2] * A_ch[2]
-                        I = A_ch[2] * (A_v[2]) ** 3 / 12
+                        A = A_v[2]
+                        I = I_v[2]
                     
-                    elemento = Element(nodos[k], nodos[k + 1], E, I, A, dx=0, dy=0)
+                    elemento = Element(nodos[k], nodos[k + 1], E, I, A, dx=dx, dy=0)
                     elementos.append(elemento)
 
     # Conectar el último piso horizontalmente (techo)
     for j in range(5):
         k = (len(Altura) - 1) * 6 + j
-        A = 0.24 * 0.68
-        I = 0.24 * (0.68) ** 3 / 12
-        elemento = Element(nodos[k], nodos[k + 1], E, I, A, dx=0, dy=0)
+        A = A_v[3]
+        I = I_v[3]
+        elemento = Element(nodos[k], nodos[k + 1], E, I, A, dx=dx, dy=0)
         elementos.append(elemento)
     return elementos
 
 
 #---------------------------------------------DATOS INICIALES-----------------------------------------------
-nodos=crear_nodos(caso)
+dx=0.5
+for caso in range(1, 4):
+    nodos=crear_nodos(caso)
+    elementos = crear_elementos(nodos,dx)
+    nDoF_total = len(nodos) * globalParameters['nDoF']
+    K_global = np.zeros((nDoF_total, nDoF_total))
 
-elementos = crear_elementos(nodos)
-nDoF_total = len(nodos) * globalParameters['nDoF']
-K_global = np.zeros((nDoF_total, nDoF_total))
+    # Agregar cada elemento en la matriz global
+    for elemento in elementos:
+        dofs = np.hstack([elemento.node_i.idx, elemento.node_j.idx])
+        for i in range(6):
+            for j in range(6):
+                K_global[dofs[i], dofs[j]] += elemento.k_global[i, j]
 
-# Agregar cada elemento en la matriz global
-for elemento in elementos:
-    dofs = np.hstack([elemento.node_i.idx, elemento.node_j.idx])
-    for i in range(6):
-        for j in range(6):
-            K_global[dofs[i], dofs[j]] += elemento.k_global[i, j]
+    solver = StructureSolver(nodos, K_global, globalParameters['nDoF'])
 
-solver = StructureSolver(nodos, K_global, globalParameters['nDoF'])
+    # Obtener resultados
+    desplazamientos = solver.get_displacements()
+    reacciones = solver.get_reactions()
 
-# Obtener resultados
-desplazamientos = solver.get_displacements()
-reacciones = solver.get_reactions()
+    # Mostrar resultados
+    solver.resumen()
+    fig, ax = plt.subplots(figsize=(8, 6))
 
-# Mostrar resultados
-solver.resumen()
-for i, nodo in enumerate(nodos):
-    # Obtén los desplazamientos en x y y del nodo
-    delta_x = desplazamientos[i * 3]  # Suponiendo que desplazamientos[i*3] es el desplazamiento en X
-    delta_y = desplazamientos[i * 3 + 1]  # Suponiendo que desplazamientos[i*3+1] es el desplazamiento en Y
-    # Actualizamos las coordenadas deformadas
-    nodo.coordenadas_deformadas = nodo.coordenadas + np.array([delta_x, delta_y])
+    # Aplicar factor de escala a la deformación
+    if caso != 3:
+        scale_factor = 1000
+    else:
+        scale_factor = 10  # Ajusta este valor para visualizar mejor la deformación
 
-# Graficamos la estructura original y deformada
-fig, ax = plt.subplots(figsize=(8, 6))
+    # Graficar las barras originales
+    for elem in elementos:
+        ax = elem.plotElement(ax=ax, color='b', text=False)
 
-# Aplicar factor de escala a la deformación
-scale_factor = 1  # Ajusta este valor para visualizar mejor la deformación
+    # Graficar las barras deformadas
+    plot_deformed_elements(elementos, ax=ax, scale_factor=scale_factor)
 
-# Graficar los elementos originales
-for elem in elementos:
-    ax = elem.plotElement(ax=ax, color='b', text=False)
+    # Graficar los nodos originales
+    for nodo in nodos:
+        ax.plot(nodo.coordenadas[0], nodo.coordenadas[1], 'bo')  # Nodos originales en azul
 
-plot_deformed_elements(elementos, ax=ax)
-# Graficar los nodos originales
-for nodo in nodos:
-    ax.plot(nodo.coordenadas[0], nodo.coordenadas[1], 'bo')  # Nodos originales en azul
+    # Graficar los nodos deformados
+    for i, nodo in enumerate(nodos):
+        # Aquí calculamos la deformación para cada nodo
+        delta_x = desplazamientos[i * 3]  # Suponiendo que desplazamientos[i*3] es el desplazamiento en X
+        delta_y = desplazamientos[i * 3 + 1]  # Suponiendo que desplazamientos[i*3+1] es el desplazamiento en Y
+        
+        # Calculamos la posición deformada (sin escala aún)
+        nodo_deformado = nodo.coordenadas + np.array([delta_x, delta_y])
 
-# Graficar la estructura deformada
-for nodo in nodos:
-    # Aplicar el factor de escala para ver mejor la deformación
-    nodo.coordenadas_deformadas *= scale_factor
-    ax.plot(nodo.coordenadas_deformadas[0], nodo.coordenadas_deformadas[1], 'ro')  # Nodos deformados en rojo
+        # Aplicamos el factor de escala solo para la visualización
+        nodo_deformado_scaled = nodo.coordenadas + np.array([delta_x, delta_y]) * scale_factor
 
-ax.set_xlabel('X [m]')
-ax.set_ylabel('Y [m]')
-ax.set_title('Deformación de la Estructura')
-ax.grid(True)
-ax.axis('equal')
-plt.show()
+        # Graficamos los nodos deformados en rojo
+        ax.plot(nodo_deformado_scaled[0], nodo_deformado_scaled[1], 'ro')  # Nodos deformados en rojo
+    momentos = [10, 20, 15, 30, 25,5]  # Momentos flectores simplificados para cada barra
+
+# Llamada a la función para graficar el diagrama de momento flector sobre la estructura
+    plot_moment_diagram(elementos, momentos)
+    ax.set_xlabel('X [m]')
+    ax.set_ylabel('Y [m]')
+    ax.set_title('Deformación de la Estructura')
+    ax.grid(True)
+    ax.axis('equal')
+    plt.show()
