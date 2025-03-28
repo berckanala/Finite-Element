@@ -82,7 +82,7 @@ class Element:
         M += M1  # Añadir el momento en el primer nodo
 
         # Escalar los diagramas para visualización
-        escala = 0.1  # Este factor ajusta la escala del diagrama
+        escala = 0.01  # Este factor ajusta la escala del diagrama
         V_scaled = V * escala
         M_scaled = M * escala
         A = A1  # Asumiendo fuerza axial constante
